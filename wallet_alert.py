@@ -31,7 +31,7 @@ logger = logging.getLogger()
 class BalanceMonitorSingleRun:
     def __init__(self):
         self.agent_emails = [ "avinash.sk@hopzy.in",]  # UPDATE YOUR AGENTS
-        self.cc_emails = ["raj.shivraj@hopzy.in","tejus.a@hopzy.in","siddarth.shetty@hopzy.in" ]  # ADD CC EMAILS HERE
+        self.cc_emails = ["raj.shivraj@hopzy.in","tejus.a@hopzy.in", ]  # ADD CC EMAILS HERE
         self.smtp_server = "smtp.zoho.in"
         self.smtp_port = 587
         self.sender_email = "madhu.l@hopzy.in"  # UPDATE YOUR EMAIL
@@ -183,3 +183,4 @@ async def main():
 
 if __name__ == "__main__":
     asyncio.run(main())
+
