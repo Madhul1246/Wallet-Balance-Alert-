@@ -26,8 +26,8 @@ logger = logging.getLogger()
 
 class BalanceMonitorSingleRun:
     def __init__(self):
-        self.agent_emails = ["avinash.sk@hopzy.in"]
-        self.cc_emails = ["tejus.a@hopzy.in"]
+        self.agent_emails = ["madhu.l@hopzy.in"]
+        self.cc_emails = ["madhu.l@hopzy.in"]
         self.smtp_server = "smtp.zoho.in"
         self.smtp_port = 587
         self.sender_email = "madhu.l@hopzy.in"
@@ -279,3 +279,4 @@ async def main():
 
 if __name__ == "__main__":
     asyncio.run(main())
+
