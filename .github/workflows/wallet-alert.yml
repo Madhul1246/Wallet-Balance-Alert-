@@ -12,6 +12,9 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+        
+      - name: Set IST Timezone  # ADD THIS
+        run: sudo timedatectl set-timezone Asia/Kolkata
 
       - name: Setup Python
         uses: actions/setup-python@v5
