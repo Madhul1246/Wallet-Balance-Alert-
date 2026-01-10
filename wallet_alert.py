@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-GDS Wallet + SMS Balance Monitor - Hopzy (SIMPLEST EMAIL)
+GDS Wallet + SMS Balance Monitor - Hopzy (WITH ACTUAL LOGO IMAGE)
 """
 
 import asyncio
@@ -8,10 +8,12 @@ import aiohttp
 import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
+from email.mime.image import MIMEImage
 from datetime import datetime
 import logging
 import sys
 import os
+import base64
 
 # FIXED: UTF-8 encoding for Windows console + file logging
 if os.name == 'nt':  # Windows
@@ -29,15 +31,21 @@ logging.basicConfig(
 )
 logger = logging.getLogger()
 
+# EMBEDDED HOPZY LOGO (Base64 encoded from your image.jpg)
+HOPZY_LOGO_BASE64 = """
+/9j/4AAQSkZJRgABAQEAZABkAAD/2wBDAAYEBQYFBAYGBQYHBwYIChAKCgkJChQODwwQFxQYGBcUFhYaHSUfGhsjHBYWICwgIyYnKSopGR8tMC0oMCUoKSj/2wBDAQoLCw4NDhwQEBw7K
+// ... (truncated for brevity - full base64 would go here)
+"""
+
 class BalanceMonitorSingleRun:
     def __init__(self):
         self.agent_emails = ["avinash.sk@hopzy.in"]
-        self.cc_emails = ["tejus.a@hopzy.in",]
+        self.cc_emails = ["tejus.a@hopzy.in"]  # Fixed trailing comma
         self.smtp_server = "smtp.zoho.in"
         self.smtp_port = 587
         self.sender_email = "madhu.l@hopzy.in"
         self.sender_password = "JqkGLkfkTf0n"
-        self.thresholds = {"EzeeInfo": 5000, "Bitla": 10000, "Vaagai": 5000, "BhashSMS": 5000}
+        self.thresholds = {"EzeeInfo": 5000, "Bitla": 10000, "Vaagai": 5000, "BhashSMS": 1000}
         self.bhashsms_url = "https://bhashsms.com/api/checkbalance.php?user=HOPZYTRANS&pass=123456"
 
     async def fetch_ezeeinfo_balance(self, session):
@@ -87,7 +95,6 @@ class BalanceMonitorSingleRun:
             return 0.0
 
     async def fetch_bhashsms_balance(self, session):
-        """Handle plain numeric response "103298" correctly"""
         try:
             async with session.get(self.bhashsms_url, timeout=aiohttp.ClientTimeout(total=15)) as resp:
                 logger.info(f"BhashSMS API Status: {resp.status}")
@@ -102,7 +109,6 @@ class BalanceMonitorSingleRun:
                 except (ValueError, TypeError):
                     logger.warning(f"BhashSMS invalid balance format: '{balance_str}'")
                     return 0.0
-                    
         except Exception as e:
             logger.error(f"ERROR BhashSMS fetch failed: {e}")
             return 0.0
@@ -115,22 +121,48 @@ class BalanceMonitorSingleRun:
             return '#059669'  # Green
         return '#6b7280'  # Gray
 
+    def embed_logo(self, msg):
+        """Embed Hopzy logo as CID image"""
+        try:
+            # Load your image.jpg file (place it in same directory as script)
+            with open('image.jpg', 'rb') as f:
+                logo_data = f.read()
+                logo_img = MIMEImage(logo_data)
+                logo_img.add_header('Content-ID', '<hopzy_logo>')
+                logo_img.add_header('Content-Disposition', 'inline', filename='hopzy_logo.jpg')
+                msg.attach(logo_img)
+                logger.info("OK Hopzy logo embedded successfully")
+        except FileNotFoundError:
+            logger.warning("image.jpg not found - using text logo fallback")
+        except Exception as e:
+            logger.error(f"Logo embedding failed: {e}")
+
     async def send_email(self, ezeeinfo_balance: float, bitla_balance: float, vaagai_balance: float, bhashsms_balance: float):
         is_low = any(balance <= self.thresholds[provider] for provider, balance in 
                      [("EzeeInfo", ezeeinfo_balance), ("Bitla", bitla_balance), ("Vaagai", vaagai_balance), ("BhashSMS", bhashsms_balance)] 
                      if balance > 0)
-        subject = "🚨 Balance Alert" if is_low else "✅ Wallet Status OK"
+        subject = "🚨 Balance Alert" if is_low else " Wallet Status Alert"
         
-        # ULTRA SIMPLE HTML EMAIL
+        # HTML EMAIL WITH EMBEDDED HOPZY LOGO IMAGE
         html_body = f"""
         <html>
         <body style="font-family: Arial, sans-serif; margin: 0; padding: 20px; background: #f5f5f5;">
-        
             <div style="max-width: 600px; margin: 0 auto; background: white; padding: 30px; border-radius: 10px;">
-             <h2 style="color: {'#dc2626' if is_low else '#059669'}; text-align: center; margin-bottom: 20px;">
+                
+                <!-- HOPZY LOGO IMAGE -->
+                <div style="text-align: left; margin-bottom: 25px; padding-bottom: 20px; border-bottom: 3px solid #0047ff;">
+                    <img src="cid:hopzy_logo" alt="Hopzy" style="max-width: 200px; height: auto; margin: 0 auto;">
+                    <div style="font-size: 14px; color: #666; margin-top: 8px; font-weight: 500;">
+                        <h2 style="color: {'#dc2626' if is_low else '#0047ff'}; text-align: center; margin-bottom: 20px;">
                     {('🚨 LOW BALANCE ALERT' if is_low else 'WALLET SUMMARY')}
-            </h2>
-            <h3 style="color: #059669; margin: 25px 0 15px 0;">SMS Wallet Balance</h3>
+                    </div>
+                    
+                </h2>
+                </div>
+                
+              
+                
+                <h3 style="color:#333; margin: 25px 0 15px 0;">SMS Wallet Balance</h3>
                 <table style="width: 100%; border-collapse: collapse;">
                     <tr style="background: #f8f9fa;">
                         <th style="padding: 12px; text-align: left; border-bottom: 2px solid #dee2e6;">Provider</th>
@@ -143,9 +175,8 @@ class BalanceMonitorSingleRun:
                         <td style="padding: 15px; text-align: center; color: #007bff;">₹{self.thresholds['BhashSMS']:,.0f}</td>
                     </tr>
                 </table>
-            
                 
-                <h3 style="color: #059669; margin: 25px 0 15px 0;">GDS Wallets</h3>
+                <h3 style="color:#333; margin: 25px 0 15px 0;">GDS Wallets</h3>
                 <table style="width: 100%; border-collapse: collapse; margin-bottom: 25px;">
                     <tr style="background: #f8f9fa;">
                         <th style="padding: 12px; text-align: left; border-bottom: 2px solid #dee2e6;">Provider</th>
@@ -169,7 +200,6 @@ class BalanceMonitorSingleRun:
                     </tr>
                 </table>
                 
-                
                 <div style="margin-top: 30px; padding: 20px; background: #f8f9fa; border-radius: 5px; text-align: center; font-size: 14px; color: #666;">
                     <strong>Last Check:</strong> {datetime.now().strftime('%d %b %Y, %I:%M %p IST')} | Next check in 3 hours
                 </div>
@@ -178,14 +208,18 @@ class BalanceMonitorSingleRun:
         </html>
         """
         
-        msg = MIMEMultipart('alternative')
+        msg = MIMEMultipart('related')
         msg['Subject'] = subject
         msg['From'] = self.sender_email
         msg['To'] = ", ".join(self.agent_emails)
         if self.cc_emails:
             msg['Cc'] = ", ".join(self.cc_emails)
         
+        # Attach HTML body
         msg.attach(MIMEText(html_body, 'html'))
+        
+        # Embed Hopzy logo image
+        self.embed_logo(msg)
         
         recipients = self.agent_emails[:]
         if self.cc_emails:
