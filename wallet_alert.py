@@ -1,3 +1,8 @@
+#!/usr/bin/env python3
+"""
+GDS Wallet + SMS Balance Monitor - Hopzy (SIMPLEST EMAIL)
+"""
+
 import asyncio
 import aiohttp
 import smtplib
@@ -26,13 +31,14 @@ logger = logging.getLogger()
 
 class BalanceMonitorSingleRun:
     def __init__(self):
-        self.agent_emails = ["avinash.sk@hopzy.in",]
-        self.cc_emails = ["tejus.a@hopzy.in",]
+        self.agent_emails = ["avinash.sk@hopzy.in"]
+        self.cc_emails = ["tejus.a@hopzy.in"]
         self.smtp_server = "smtp.zoho.in"
         self.smtp_port = 587
         self.sender_email = "madhu.l@hopzy.in"
         self.sender_password = "JqkGLkfkTf0n"
-        self.thresholds = {"EzeeInfo": 5000, "Bitla": 10000, "Vaagai": 5000}
+        self.thresholds = {"EzeeInfo": 5000, "Bitla": 10000, "Vaagai": 5000, "BhashSMS": 1000}
+        self.bhashsms_url = "https://bhashsms.com/api/checkbalance.php?user=HOPZYTRANS&pass=123456"
 
     async def fetch_ezeeinfo_balance(self, session):
         url = "https://prodapi.hopzy.in/api/public/getprofileDetails/85838250575G9524849Q104XEL1CLB8"
@@ -80,147 +86,90 @@ class BalanceMonitorSingleRun:
             logger.error(f"ERROR Vaagai fetch failed: {e}")
             return 0.0
 
-    def get_html_balance(self, provider: str, balance: float) -> str:
+    async def fetch_bhashsms_balance(self, session):
+        """Handle plain numeric response "103298" correctly"""
+        try:
+            async with session.get(self.bhashsms_url, timeout=aiohttp.ClientTimeout(total=15)) as resp:
+                logger.info(f"BhashSMS API Status: {resp.status}")
+                text = await resp.text()
+                logger.info(f"BhashSMS raw response: {text}")
+                
+                balance_str = text.strip()
+                try:
+                    balance = float(balance_str)
+                    logger.info(f"OK BhashSMS balance: ₹{balance:,.2f}")
+                    return balance
+                except (ValueError, TypeError):
+                    logger.warning(f"BhashSMS invalid balance format: '{balance_str}'")
+                    return 0.0
+                    
+        except Exception as e:
+            logger.error(f"ERROR BhashSMS fetch failed: {e}")
+            return 0.0
+
+    def get_status_color(self, provider: str, balance: float) -> str:
         threshold = self.thresholds[provider]
         if balance <= threshold and balance > 0:
-            return f'<span style="color: #dc2626; font-weight: 700; font-size: 28px; letter-spacing: -0.5px;">₹{balance:,.0f}</span>'
+            return '#dc2626'  # Red
         elif balance > 0:
-            return f'<span style="color: #059669; font-weight: 700; font-size: 28px; letter-spacing: -0.5px;">₹{balance:,.0f}</span>'
-        return '<span style="color: #6b7280; font-weight: 500; font-size: 24px;">₹0.00 (Error)</span>'
+            return '#059669'  # Green
+        return '#6b7280'  # Gray
 
-    async def send_email(self, ezeeinfo_balance: float, bitla_balance: float, vaagai_balance: float):
-        ezeeinfo_html = self.get_html_balance("EzeeInfo", ezeeinfo_balance)
-        bitla_html = self.get_html_balance("Bitla", bitla_balance)
-        vaagai_html = self.get_html_balance("Vaagai", vaagai_balance)
+    async def send_email(self, ezeeinfo_balance: float, bitla_balance: float, vaagai_balance: float, bhashsms_balance: float):
+        is_low = any(balance <= self.thresholds[provider] for provider, balance in 
+                     [("EzeeInfo", ezeeinfo_balance), ("Bitla", bitla_balance), ("Vaagai", vaagai_balance), ("BhashSMS", bhashsms_balance)] 
+                     if balance > 0)
+        subject = "🚨 Balance Alert" if is_low else "✅ Wallet Status OK"
         
-        is_low = (ezeeinfo_balance <= self.thresholds["EzeeInfo"] or 
-                 bitla_balance <= self.thresholds["Bitla"] or 
-                 vaagai_balance <= self.thresholds["Vaagai"])
-        subject = "🚨 GDS Balance Alert - Action Required" if is_low else "✅ GDS Wallet Status Report"
-        
-        # ENHANCED 1000px WIDTH PROFESSIONAL TEMPLATE
+        # ULTRA SIMPLE HTML EMAIL
         html_body = f"""
-        <!DOCTYPE html>
         <html>
-        <head>
-            <meta charset="UTF-8">
-            <meta name="viewport" content="width=device-width, initial-scale=1.0">
-            <style>
-                * {{ margin: 0; padding: 0; box-sizing: border-box; }}
-                body {{ font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; line-height: 1.6; color: #333; background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%); }}
-                .email-container {{ width: 100%; max-width: 800px; margin: 20px auto; background: #ffffff; border-radius: 12px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); overflow: hidden; }}
-                .header-section {{ background: linear-gradient(135deg, #1e40af 0%, #3b82f6 100%); color: #ffffff; padding: 25px 30px; }}
-                .header-content {{ display: flex; justify-content: space-between; align-items: center; }}
-                .status-bar {{ background: {'#fef2f2' if is_low else '#f0fdf4'}; padding: 20px 30px; border-bottom: 1px solid {'#fecaca' if is_low else '#bbf7d0'}; }}
-                .status-text {{ font-size: 15px; font-weight: 600; color: {'#dc2626' if is_low else '#059669'}; }}
-                .status-badge {{ display: inline-block; background: {'#fee2e2' if is_low else '#d1fae5'}; padding: 8px 16px; border-radius: 25px; font-size: 13px; font-weight: 700; color: {'#dc2626' if is_low else '#059669'}; }}
-                .content-section {{ padding: 35px 30px; }}
-                .section-title {{ font-size: 22px; font-weight: 700; color: #2c3e50; margin-bottom: 10px; border-bottom: 3px solid #3b82f6; padding-bottom: 10px; }}
-                .subtitle {{ font-size: 15px; color: #6b7280; margin-bottom: 30px; }}
-                .balance-grid {{ display: table; width: 100%; border-collapse: separate; border-spacing: 0 12px; table-layout: fixed; }}
-                .balance-card {{ display: table-row; background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%); border-radius: 16px; border: 1px solid #e2e8f0; overflow: hidden; }}
-                .balance-card:hover {{ box-shadow: 0 8px 25px rgba(0,0,0,0.1); transform: translateY(-2px); }}
-                .provider-info {{ display: table-cell; width: 45%; padding: 12px 15px; vertical-align: middle; }}
-                .provider-logo {{ width: 200px; height: 55px; border-radius: 14px; display: flex; align-items: center; justify-content: center; font-size: 29px; font-weight: 700; color: white; }}
-                .bitla-logo {{ background: linear-gradient(135deg, #3b82f6, #1d4ed8); }}
-                .vaagai-logo {{ background: linear-gradient(135deg, #06b6d4, #0891b2); }}
-                .ezee-logo {{ background: linear-gradient(135deg, #10b981, #059669); }}
-                .balance-amount {{ display: table-cell; width: 22%; padding: 12px 15px; text-align: center; font-size: 32px; font-weight: 700; vertical-align: middle; }}
-                .threshold-info {{ display: table-cell; width: 33%; padding: 12px 15px; vertical-align: middle; text-align: right; }}
-                .threshold-label {{ font-size: 20px; color: #6b7280; margin-bottom: 6px; }}
-                .threshold-value {{ font-size: 23px; font-weight: 700; color: #1e40af; }}
-                .footer {{ background: linear-gradient(135deg, #34495e 0%, #2c3e50 100%); color: #ecf0f1; padding: 30px; text-align: center; font-size: 14px; }}
-                @media (max-width: 768px) {{
-                    .email-container {{ margin: 10px; border-radius: 8px; }}
-                    .header-content {{ flex-direction: column; gap: 15px; text-align: center; }}
-                    .content-section {{ padding: 30px 25px;; }}
-                    .balance-card {{ display: block; margin-bottom: 15px; }}
-                    .provider-info, .balance-amount, .threshold-info {{ display: block; width: 100%; text-align: center; padding: 15px 20px; }}
-                    .balance-grid {{ border-spacing: 0; }}
-                }}
-            </style>
-        </head>
-        <body>
-            <div class="email-container">
-                <!-- Header -->
-                <div class="header-section">
-                    <div class="header-content">
-                        <div style="font-size: 26px; font-weight: 800; letter-spacing: -0.5px;">
-                            {('🚨 GDS Balance Alert' if is_low else '✅ GDS Wallet Status')}
-                        </div>
-                         <!--<div style="font-size: 17px; opacity: 0.95;">Hopzy Wallet Dashboard</div> -->
-                    </div>
-                </div>
-
-                <!-- Status Bar -->
-                <div class="status-bar">
-                    <table width="100%" cellpadding="0" cellspacing="0">
-                        <tr>
-                            <td class="status-text">
-                                {('⚠️ One or more wallets below threshold - Immediate action required' if is_low else ' All wallets above threshold limits')}
-                            </td>
-                            <td align="right">
-                                <span class="status-badge">{('CRITICAL' if is_low else 'NORMAL')}</span>
-                            </td>
-                        </tr>
-                    </table>
-                </div>
-
-                <!-- Content -->
-                <div class="content-section">
-                    <!--<div class="section-title">Current Wallet Balances</div>-->
-                    <!--<div class="subtitle">Real-time balances across all GDS providers (Updated live)</div> -->
-                    
-                    <table class="balance-grid">
-                        <!-- Bitla Card -->
-                        <tr class="balance-card">
-                            <td class="provider-info">
-                                <div class="provider-logo bitla-logo">Bitla</div>
-                            </td>
-                            <td class="balance-amount">{bitla_html}</td>
-                            <td class="threshold-info">
-                                <div class="threshold-label">Threshold</div>
-                                <div class="threshold-value">₹{self.thresholds['Bitla']:,.0f}</div>
-                            </td>
-                        </tr>
-
-                        <!-- Vaagai Card -->
-                        <tr class="balance-card">
-                            <td class="provider-info">
-                                <div class="provider-logo vaagai-logo">Vaagai</div>
-                            </td>
-                            <td class="balance-amount">{vaagai_html}</td>
-                            <td class="threshold-info">
-                                <div class="threshold-label">Threshold</div>
-                                <div class="threshold-value">₹{self.thresholds['Vaagai']:,.0f}</div>
-                            </td>
-                        </tr>
-
-                        <!-- EzeeInfo Card -->
-                        <tr class="balance-card">
-                            <td class="provider-info">
-                                <div class="provider-logo ezee-logo">EzeeInfo</div>
-                            </td>
-                            <td class="balance-amount">{ezeeinfo_html}</td>
-                            <td class="threshold-info">
-                                <div class="threshold-label">Threshold</div>
-                                <div class="threshold-value">₹{self.thresholds['EzeeInfo']:,.0f}</div>
-                            </td>
-                        </tr>
-                    </table>
-                </div>
-
-                <!-- Footer -->
-                <div class="footer">
-                    <div style="max-width: 280px; margin: 0 auto;">
-                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; font-size: 15px;">
-                            <span>Last Updated:</span>
-                            <strong>{datetime.now().strftime('%d %b %Y, %I:%M %p IST')}</strong>
-                        </div>
-                        <div style="font-size: 13px; opacity: 0.9;">
-                             GDS Wallet Status | Next check in 3 hours
-                        </div>
-                    </div>
+        <body style="font-family: Arial, sans-serif; margin: 0; padding: 20px; background: #f5f5f5;">
+            <div style="max-width: 600px; margin: 0 auto; background: white; padding: 30px; border-radius: 10px;">
+                <h2 style="color: {'#dc2626' if is_low else '#059669'}; text-align: center; margin-bottom: 20px;">
+                    {('🚨 LOW BALANCE ALERT' if is_low else '✅ ALL OK')}
+                </h2>
+                
+                <h3 style="color: #333; margin: 25px 0 15px 0;">GDS Wallets</h3>
+                <table style="width: 100%; border-collapse: collapse; margin-bottom: 25px;">
+                    <tr style="background: #f8f9fa;">
+                        <th style="padding: 12px; text-align: left; border-bottom: 2px solid #dee2e6;">Provider</th>
+                        <th style="padding: 12px; text-align: center; border-bottom: 2px solid #dee2e6;">Balance</th>
+                        <th style="padding: 12px; text-align: center; border-bottom: 2px solid #dee2e6;">Threshold</th>
+                    </tr>
+                    <tr>
+                        <td style="padding: 15px; font-weight: bold;">Bitla</td>
+                        <td style="padding: 15px; text-align: center; font-size: 20px; font-weight: bold; color: {self.get_status_color('Bitla', bitla_balance)};">₹{bitla_balance:,.0f}</td>
+                        <td style="padding: 15px; text-align: center; color: #007bff;">₹{self.thresholds['Bitla']:,.0f}</td>
+                    </tr>
+                    <tr>
+                        <td style="padding: 15px; font-weight: bold;">Vaagai</td>
+                        <td style="padding: 15px; text-align: center; font-size: 20px; font-weight: bold; color: {self.get_status_color('Vaagai', vaagai_balance)};">₹{vaagai_balance:,.0f}</td>
+                        <td style="padding: 15px; text-align: center; color: #007bff;">₹{self.thresholds['Vaagai']:,.0f}</td>
+                    </tr>
+                    <tr>
+                        <td style="padding: 15px; font-weight: bold;">EzeeInfo</td>
+                        <td style="padding: 15px; text-align: center; font-size: 20px; font-weight: bold; color: {self.get_status_color('EzeeInfo', ezeeinfo_balance)};">₹{ezeeinfo_balance:,.0f}</td>
+                        <td style="padding: 15px; text-align: center; color: #007bff;">₹{self.thresholds['EzeeInfo']:,.0f}</td>
+                    </tr>
+                </table>
+                
+                <h3 style="color: #333; margin: 25px 0 15px 0;">SMS Balance</h3>
+                <table style="width: 100%; border-collapse: collapse;">
+                    <tr style="background: #f8f9fa;">
+                        <th style="padding: 12px; text-align: left; border-bottom: 2px solid #dee2e6;">Provider</th>
+                        <th style="padding: 12px; text-align: center; border-bottom: 2px solid #dee2e6;">Balance</th>
+                        <th style="padding: 12px; text-align: center; border-bottom: 2px solid #dee2e6;">Threshold</th>
+                    </tr>
+                    <tr>
+                        <td style="padding: 15px; font-weight: bold;">BhashSMS</td>
+                        <td style="padding: 15px; text-align: center; font-size: 20px; font-weight: bold; color: {self.get_status_color('BhashSMS', bhashsms_balance)};">₹{bhashsms_balance:,.0f}</td>
+                        <td style="padding: 15px; text-align: center; color: #007bff;">₹{self.thresholds['BhashSMS']:,.0f}</td>
+                    </tr>
+                </table>
+                
+                <div style="margin-top: 30px; padding: 20px; background: #f8f9fa; border-radius: 5px; text-align: center; font-size: 14px; color: #666;">
+                    <strong>Last Check:</strong> {datetime.now().strftime('%d %b %Y, %I:%M %p IST')} | Next check in 3 hours
                 </div>
             </div>
         </body>
@@ -253,24 +202,28 @@ class BalanceMonitorSingleRun:
 
     async def run_single_check(self):
         print("Fetching LIVE balances...")
-        logger.info("=== GDS Balance Check Started ===")
+        logger.info("=== GDS + SMS Balance Check Started ===")
         
         async with aiohttp.ClientSession() as session:
-            ezeeinfo_task = asyncio.create_task(self.fetch_ezeeinfo_balance(session))
-            bitla_task = asyncio.create_task(self.fetch_bitla_balance(session))
-            vaagai_task = asyncio.create_task(self.fetch_vaagai_balance(session))
-            ezeeinfo_balance, bitla_balance, vaagai_balance = await asyncio.gather(ezeeinfo_task, bitla_task, vaagai_task)
+            tasks = [
+                asyncio.create_task(self.fetch_ezeeinfo_balance(session)),
+                asyncio.create_task(self.fetch_bitla_balance(session)),
+                asyncio.create_task(self.fetch_vaagai_balance(session)),
+                asyncio.create_task(self.fetch_bhashsms_balance(session))
+            ]
+            ezeeinfo_balance, bitla_balance, vaagai_balance, bhashsms_balance = await asyncio.gather(*tasks)
         
         RED, GREEN, RESET = "\033[91m", "\033[92m", "\033[0m"
-        ezeeinfo_color = f"{RED}₹{ezeeinfo_balance:,.0f}{RESET}" if ezeeinfo_balance <= self.thresholds["EzeeInfo"] else f"{GREEN}₹{ezeeinfo_balance:,.0f}{RESET}"
-        bitla_color = f"{RED}₹{bitla_balance:,.0f}{RESET}" if bitla_balance <= self.thresholds["Bitla"] else f"{GREEN}₹{bitla_balance:,.0f}{RESET}"
-        vaagai_color = f"{RED}₹{vaagai_balance:,.0f}{RESET}" if vaagai_balance <= self.thresholds["Vaagai"] else f"{GREEN}₹{vaagai_balance:,.0f}{RESET}"
+        colors = {}
+        for provider, balance in [("EzeeInfo", ezeeinfo_balance), ("Vaagai", vaagai_balance), ("Bitla", bitla_balance), ("BhashSMS", bhashsms_balance)]:
+            color = RED if balance <= self.thresholds[provider] else GREEN
+            colors[provider] = f"{color}₹{balance:,.0f}{RESET}"
         
-        print(f"gds:ezeeinfo,vaagai,bitla total balance:{ezeeinfo_color},{vaagai_color},{bitla_color}  threshold balance :{self.thresholds['EzeeInfo']:,},{self.thresholds['Vaagai']:,},{self.thresholds['Bitla']:,}")
-        logger.info(f"Console: gds:ezeeinfo,vaagai,bitla total balance:{ezeeinfo_balance:,.0f},{vaagai_balance:,.0f},{bitla_balance:,.0f}")
+        print(f"gds+sms:ezeeinfo,vaagai,bitla,bhashsms total balance:{colors['EzeeInfo']},{colors['Vaagai']},{colors['Bitla']},{colors['BhashSMS']}  threshold:{self.thresholds['EzeeInfo']:,},{self.thresholds['Vaagai']:,},{self.thresholds['Bitla']:,},{self.thresholds['BhashSMS']:,}")
+        logger.info(f"Console: ezeeinfo:{ezeeinfo_balance:,.0f}, vaagai:{vaagai_balance:,.0f}, bitla:{bitla_balance:,.0f}, bhashsms:{bhashsms_balance:,.0f}")
         
-        await self.send_email(ezeeinfo_balance, bitla_balance, vaagai_balance)
-        logger.info("=== GDS Balance Check Completed ===")
+        await self.send_email(ezeeinfo_balance, bitla_balance, vaagai_balance, bhashsms_balance)
+        logger.info("=== GDS + SMS Balance Check Completed ===")
         print("Done! Check balance_log.txt for details.")
 
 async def main():
@@ -279,5 +232,3 @@ async def main():
 
 if __name__ == "__main__":
     asyncio.run(main())
-
-
