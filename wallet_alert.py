@@ -32,12 +32,12 @@ logger = logging.getLogger()
 class BalanceMonitorSingleRun:
     def __init__(self):
         self.agent_emails = ["avinash.sk@hopzy.in"]
-        self.cc_emails = ["tejus.a@hopzy.in"]
+        self.cc_emails = ["tejus.a@hopzy.in",]
         self.smtp_server = "smtp.zoho.in"
         self.smtp_port = 587
         self.sender_email = "madhu.l@hopzy.in"
         self.sender_password = "JqkGLkfkTf0n"
-        self.thresholds = {"EzeeInfo": 5000, "Bitla": 10000, "Vaagai": 5000, "BhashSMS": 1000}
+        self.thresholds = {"EzeeInfo": 5000, "Bitla": 10000, "Vaagai": 5000, "BhashSMS": 5000}
         self.bhashsms_url = "https://bhashsms.com/api/checkbalance.php?user=HOPZYTRANS&pass=123456"
 
     async def fetch_ezeeinfo_balance(self, session):
@@ -125,16 +125,31 @@ class BalanceMonitorSingleRun:
         html_body = f"""
         <html>
         <body style="font-family: Arial, sans-serif; margin: 0; padding: 20px; background: #f5f5f5;">
+        
             <div style="max-width: 600px; margin: 0 auto; background: white; padding: 30px; border-radius: 10px;">
-                <h2 style="color: {'#dc2626' if is_low else '#059669'}; text-align: center; margin-bottom: 20px;">
-                    {('🚨 LOW BALANCE ALERT' if is_low else '✅ ALL OK')}
-                </h2>
+             <h2 style="color: {'#dc2626' if is_low else '#059669'}; text-align: center; margin-bottom: 20px;">
+                    {('🚨 LOW BALANCE ALERT' if is_low else 'WALLET SUMMARY')}
+            </h2>
+            <h3 style="color: #059669; margin: 25px 0 15px 0;">SMS Wallet Balance</h3>
+                <table style="width: 100%; border-collapse: collapse;">
+                    <tr style="background: #f8f9fa;">
+                        <th style="padding: 12px; text-align: left; border-bottom: 2px solid #dee2e6;">Provider</th>
+                        <th style="padding: 12px; text-align: center; border-bottom: 2px solid #dee2e6;">Current Balance</th>
+                        <th style="padding: 12px; text-align: center; border-bottom: 2px solid #dee2e6;">Threshold</th>
+                    </tr>
+                    <tr>
+                        <td style="padding: 15px; font-weight: bold;">BhashSMS Credits</td>
+                        <td style="padding: 15px; text-align: center; font-size: 20px; font-weight: bold; color: {self.get_status_color('BhashSMS', bhashsms_balance)};">₹{bhashsms_balance:,.0f}</td>
+                        <td style="padding: 15px; text-align: center; color: #007bff;">₹{self.thresholds['BhashSMS']:,.0f}</td>
+                    </tr>
+                </table>
+            
                 
-                <h3 style="color: #333; margin: 25px 0 15px 0;">GDS Wallets</h3>
+                <h3 style="color: #059669; margin: 25px 0 15px 0;">GDS Wallets</h3>
                 <table style="width: 100%; border-collapse: collapse; margin-bottom: 25px;">
                     <tr style="background: #f8f9fa;">
                         <th style="padding: 12px; text-align: left; border-bottom: 2px solid #dee2e6;">Provider</th>
-                        <th style="padding: 12px; text-align: center; border-bottom: 2px solid #dee2e6;">Balance</th>
+                        <th style="padding: 12px; text-align: center; border-bottom: 2px solid #dee2e6;">Current Balance</th>
                         <th style="padding: 12px; text-align: center; border-bottom: 2px solid #dee2e6;">Threshold</th>
                     </tr>
                     <tr>
@@ -154,19 +169,6 @@ class BalanceMonitorSingleRun:
                     </tr>
                 </table>
                 
-                <h3 style="color: #333; margin: 25px 0 15px 0;">SMS Balance</h3>
-                <table style="width: 100%; border-collapse: collapse;">
-                    <tr style="background: #f8f9fa;">
-                        <th style="padding: 12px; text-align: left; border-bottom: 2px solid #dee2e6;">Provider</th>
-                        <th style="padding: 12px; text-align: center; border-bottom: 2px solid #dee2e6;">Balance</th>
-                        <th style="padding: 12px; text-align: center; border-bottom: 2px solid #dee2e6;">Threshold</th>
-                    </tr>
-                    <tr>
-                        <td style="padding: 15px; font-weight: bold;">BhashSMS</td>
-                        <td style="padding: 15px; text-align: center; font-size: 20px; font-weight: bold; color: {self.get_status_color('BhashSMS', bhashsms_balance)};">₹{bhashsms_balance:,.0f}</td>
-                        <td style="padding: 15px; text-align: center; color: #007bff;">₹{self.thresholds['BhashSMS']:,.0f}</td>
-                    </tr>
-                </table>
                 
                 <div style="margin-top: 30px; padding: 20px; background: #f8f9fa; border-radius: 5px; text-align: center; font-size: 14px; color: #666;">
                     <strong>Last Check:</strong> {datetime.now().strftime('%d %b %Y, %I:%M %p IST')} | Next check in 3 hours
