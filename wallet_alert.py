@@ -40,7 +40,7 @@ HOPZY_LOGO_BASE64 = """
 class BalanceMonitorSingleRun:
     def __init__(self):
         self.agent_emails = ["avinash.sk@hopzy.in"]
-        self.cc_emails = ["tejus.a@hopzy.in"]  # Fixed trailing comma
+        self.cc_emails = ["tejus.a@hopzy.in","bandari.gk@hopzy.in","siddarth.shetty@hopzy.in"]  # Fixed trailing comma
         self.smtp_server = "smtp.zoho.in"
         self.smtp_port = 587
         self.sender_email = "madhu.l@hopzy.in"
@@ -151,7 +151,7 @@ class BalanceMonitorSingleRun:
                 
                 <!-- HOPZY LOGO IMAGE -->
                 <div style="text-align: left; margin-bottom: 25px; padding-bottom: 20px; border-bottom: 3px solid #0047ff;">
-                    <img src="cid:hopzy_logo" alt="Hopzy" style="max-width: 200px; height: auto; margin: 0 auto;">
+                    <img src="cid:hopzy_logo" alt="Hopzy" style="max-width: 100px; height: auto; margin: 0 auto;">
                     <div style="font-size: 14px; color: #666; margin-top: 8px; font-weight: 500;">
                         <h2 style="color: {'#dc2626' if is_low else '#0047ff'}; text-align: center; margin-bottom: 20px;">
                     {('🚨 LOW BALANCE ALERT' if is_low else 'WALLET SUMMARY')}
