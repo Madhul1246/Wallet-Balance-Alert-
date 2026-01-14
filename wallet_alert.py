@@ -40,7 +40,7 @@ HOPZY_LOGO_BASE64 = """
 class BalanceMonitorSingleRun:
     def __init__(self):
         self.agent_emails = ["avinash.sk@hopzy.in"]
-        self.cc_emails = ["tejus.a@hopzy.in","bandari.gk@hopzy.in","siddarth.shetty@hopzy.in"]  # Fixed trailing comma
+        self.cc_emails = ["tejus.a@hopzy.in","bandari.gk@hopzy.in",]  # Fixed trailing comma
         self.smtp_server = "smtp.zoho.in"
         self.smtp_port = 587
         self.sender_email = "madhu.l@hopzy.in"
@@ -268,3 +268,4 @@ async def main():
 
 if __name__ == "__main__":
     asyncio.run(main())
+
