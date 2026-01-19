@@ -2,7 +2,8 @@ name: Wallet Balance Alert (IST)
 
 on:
   schedule:
-   - cron: '30 3 * * *'  # Every 3hrs starting 9AM IST
+   - cron: '0 9,12,15,18,21 * * *'
+
   workflow_dispatch:
 
 jobs:
