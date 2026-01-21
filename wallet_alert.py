@@ -48,7 +48,7 @@ class BalanceMonitorSingleRun:
             "BhashWA": 500,
         }
         self.bhashsms_url = "https://bhashsms.com/api/checkbalance.php?user=HOPZYTRANS&pass=123456"
-        self.bhashwa_url = "https://bhashsms.com/api/checkbalance.php?user=hopzybwa&pass=123456"
+        self.bhashwa_url = "https://bhashsms.com/api/checkbalancewamu.php?user=hopzybwa&pass=123456"
 
     async def fetch_ezeeinfo_balance(self, session):
         url = "https://prodapi.hopzy.in/api/public/getprofileDetails/85838250575G9524849Q104XEL1CLB8"
@@ -311,3 +311,4 @@ async def main():
 
 if __name__ == "__main__":
     asyncio.run(main())
+
