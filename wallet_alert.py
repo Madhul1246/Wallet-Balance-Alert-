@@ -44,8 +44,8 @@ class BalanceMonitorSingleRun:
             "EzeeInfo": 5000,
             "Bitla": 10000,
             "Vaagai": 5000,
-            "BhashSMS": 1000,
-            "BhashWA": 500,
+            "BhashSMS": 5000,
+            "BhashWA": 5000,
         }
         self.bhashsms_url = "https://bhashsms.com/api/checkbalance.php?user=HOPZYTRANS&pass=123456"
         self.bhashwa_url = "https://bhashsms.com/api/checkbalancewamu.php?user=hopzybwa&pass=123456"
@@ -311,4 +311,5 @@ async def main():
 
 if __name__ == "__main__":
     asyncio.run(main())
+
 
