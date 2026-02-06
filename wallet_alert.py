@@ -105,7 +105,7 @@ class BalanceMonitorSingleRun:
                 balance_str = text.strip()
                 try:
                     balance = float(balance_str)
-                    logger.info(f"OK BhashSMS balance: ₹{balance:,.2f}")
+                    logger.info(f"OK BhashSMS balance: {balance:,.2f}")
                     return balance
                 except (ValueError, TypeError):
                     logger.warning(f"BhashSMS invalid balance format: '{balance_str}'")
@@ -123,7 +123,7 @@ class BalanceMonitorSingleRun:
                 balance_str = text.strip()
                 try:
                     balance = float(balance_str)
-                    logger.info(f"OK BhashWA balance: ₹{balance:,.2f}")
+                    logger.info(f"OK BhashWA balance: {balance:,.2f}")
                     return balance
                 except (ValueError, TypeError):
                     logger.warning(f"BhashWA invalid balance format: '{balance_str}'")
@@ -311,5 +311,6 @@ async def main():
 
 if __name__ == "__main__":
     asyncio.run(main())
+
 
 
