@@ -199,12 +199,12 @@ class BalanceMonitorSingleRun:
                     </tr>
                     <tr>
                         <td style="padding: 15px; font-weight: bold;">BhashSMS Credits</td>
-                        <td style="padding: 15px; text-align: center; font-size: 20px; font-weight: bold; color: {self.get_status_color('BhashSMS', bhashsms_balance)};">₹{bhashsms_balance:,.0f}</td>
+                        <td style="padding: 15px; text-align: center; font-size: 20px; font-weight: bold; color: {self.get_status_color('BhashSMS', bhashsms_balance)};">{bhashsms_balance:,.0f}</td>
                         <td style="padding: 15px; text-align: center; color: #007bff;">₹{self.thresholds['BhashSMS']:,.0f}</td>
                     </tr>
                     <tr>
                         <td style="padding: 15px; font-weight: bold;">Bhash WhatsApp Credits</td>
-                        <td style="padding: 15px; text-align: center; font-size: 20px; font-weight: bold; color: {self.get_status_color('BhashWA', bhashwa_balance)};">₹{bhashwa_balance:,.0f}</td>
+                        <td style="padding: 15px; text-align: center; font-size: 20px; font-weight: bold; color: {self.get_status_color('BhashWA', bhashwa_balance)};">{bhashwa_balance:,.0f}</td>
                         <td style="padding: 15px; text-align: center; color: #007bff;">₹{self.thresholds['BhashWA']:,.0f}</td>
                     </tr>
                 </table>
@@ -278,7 +278,7 @@ class BalanceMonitorSingleRun:
             ]
             ezeeinfo_balance, bitla_balance, vaagai_balance, bhashsms_balance, bhashwa_balance = await asyncio.gather(*tasks)
 
-        RED, GREEN, RESET = "\033[91m", "\033[92m", "\033[0m"
+        RED, GREEN, RESET = "\\033[91m", "\\033[92m", "\\033[0m"
         colors = {}
         for provider, balance in [
             ("EzeeInfo", ezeeinfo_balance),
@@ -288,7 +288,10 @@ class BalanceMonitorSingleRun:
             ("BhashWA", bhashwa_balance),
         ]:
             color = RED if balance <= self.thresholds[provider] else GREEN
-            colors[provider] = f"{color}₹{balance:,.0f}{RESET}"
+            if provider in ['BhashSMS', 'BhashWA']:
+                colors[provider] = f"{color}{balance:,.0f}{RESET}"
+            else:
+                colors[provider] = f"{color}₹{balance:,.0f}{RESET}"
 
         print(f"gds+sms:ezeeinfo,vaagai,bitla,bhashsms,bhashwa "
               f"total balance:{colors['EzeeInfo']},{colors['Vaagai']},{colors['Bitla']},{colors['BhashSMS']},{colors['BhashWA']}  "
@@ -311,6 +314,3 @@ async def main():
 
 if __name__ == "__main__":
     asyncio.run(main())
-
-
-
