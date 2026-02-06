@@ -200,12 +200,12 @@ class BalanceMonitorSingleRun:
                     <tr>
                         <td style="padding: 15px; font-weight: bold;">BhashSMS Credits</td>
                         <td style="padding: 15px; text-align: center; font-size: 20px; font-weight: bold; color: {self.get_status_color('BhashSMS', bhashsms_balance)};">{bhashsms_balance:,.0f}</td>
-                        <td style="padding: 15px; text-align: center; color: #007bff;">₹{self.thresholds['BhashSMS']:,.0f}</td>
+                        <td style="padding: 15px; text-align: center; color: #007bff;">{self.thresholds['BhashSMS']:,.0f}</td>
                     </tr>
                     <tr>
                         <td style="padding: 15px; font-weight: bold;">Bhash WhatsApp Credits</td>
                         <td style="padding: 15px; text-align: center; font-size: 20px; font-weight: bold; color: {self.get_status_color('BhashWA', bhashwa_balance)};">{bhashwa_balance:,.0f}</td>
-                        <td style="padding: 15px; text-align: center; color: #007bff;">₹{self.thresholds['BhashWA']:,.0f}</td>
+                        <td style="padding: 15px; text-align: center; color: #007bff;">{self.thresholds['BhashWA']:,.0f}</td>
                     </tr>
                 </table>
                 
